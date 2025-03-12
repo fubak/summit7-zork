@@ -61,6 +61,11 @@
       margin-top: 10px;
     }
   </style>
+  <!-- Firebase SDKs (Updated URLs) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+  <script src="game.js"></script>
 </head>
 <body>
   <div id="title">
@@ -76,7 +81,7 @@
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Password">
       <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
-      <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button><br/>
+      <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button><br />
       <button onclick="logInWithGoogle()">Log In with Google</button>
       <div id="authMessage"></div>
     </div>
@@ -85,10 +90,5 @@
     <div id="output"></div>
     <input type="text" id="commandInput" placeholder="Enter command...">
   </div>
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  <script src="game.js"></script>
 </body>
 </html>

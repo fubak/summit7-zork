@@ -8,6 +8,8 @@ const title = `
 |_____/ \\___/|_|  |_|_|  |_|_____|  |_|    |____|
 `;
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDZPdAtqmvGSc0-CSr5CYH5cQcV7ez3qgg",
   authDomain: "summit-7-zork.firebaseapp.com",
@@ -20,7 +22,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+    // Initialize Firebase
 const auth = firebase.auth();
 const database = firebase.database();
 
@@ -274,7 +279,7 @@ function help() {
          "Hint: Explore rooms and read items for clues!");
 }
 
-// Firebase Authentication
+// Firebase Authentication Functions
 function signUp(email, password) {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
