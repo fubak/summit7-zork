@@ -14,7 +14,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Game world
+// Game world definition
 const rooms = {
   serviceDesk: {
     description: "You are at the Service Desk of Summit 7. A computer hums, and a note lies on the desk. An incident report is pinned to a board. Exits: north to Engineering Lab, east to Client Network, west to Training Room, south to Security Vault.",
@@ -107,7 +107,6 @@ function look() {
   const room = rooms[currentRoom];
   let description = room.description;
 
-  // Adjust description based on room state
   if (currentRoom === "engineeringLab") {
     description = room.state.computer === 'locked'
       ? "You are in the Engineering Lab. A computer with antivirus software is locked with a password prompt. A firewall config sits on a shelf."
@@ -130,7 +129,7 @@ function look() {
   output(description);
 }
 
-// Go to another room
+// Move to another room
 function go(direction) {
   const room = rooms[currentRoom];
   if (room.exits[direction]) {
@@ -242,7 +241,7 @@ function help() {
          "Hint: Explore rooms and read items for clues!");
 }
 
-// Firebase Authentication Functions
+// **Firebase Authentication Functions**
 function signUp(email, password) {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
@@ -258,6 +257,19 @@ function logIn(email, password) {
     .then((userCredential) => {
       output("Logged in successfully!");
       loadGame(userCredential.user.uid);
+    })
+    .catch((error) => {
+      output("Error: " + error.message);
+    });
+}
+
+// **Google Login Function**
+function logInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then((result) => {
+      output("Logged in with Google successfully!");
+      loadGame(result.user.uid);
     })
     .catch((error) => {
       output("Error: " + error.message);
@@ -311,7 +323,7 @@ function loadGame(uid) {
     });
 }
 
-// Natural language command parser
+// Natural language parser
 function parseInput(input) {
   const synonyms = {
     go: ["go", "move", "walk", "head", "proceed"],
@@ -395,7 +407,7 @@ function handleCommand(command, argument) {
   }
 }
 
-// Initialize game and handle input
+// Initialize game and set up event listeners
 document.addEventListener("DOMContentLoaded", () => {
   const input = document.getElementById("commandInput");
   input.addEventListener("keypress", (e) => {
