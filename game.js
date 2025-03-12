@@ -1,4 +1,4 @@
-// Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDZPdAtqmvGSc0-CSr5CYH5cQcV7ez3qgg",
   authDomain: "summit-7-zork.firebaseapp.com",
@@ -14,23 +14,58 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
-
-// Game world definition (map grid)
-const mapWidth = 10;
-const mapHeight = 10;
-const map = [
-  [1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,2,0,0,0,0,1],
-  [1,0,3,0,2,0,4,0,0,1],
-  [1,0,0,0,2,0,0,0,0,1],
-  [1,2,2,2,0,2,2,2,2,1],
-  [1,0,0,0,2,0,0,0,0,1],
-  [1,0,0,0,2,0,0,0,0,1],
-  [1,0,0,0,2,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1]
-];
-// 0: empty, 1: outer wall, 2: Service Desk walls, 3: Engineering Lab, 4: Client Network
+ 
+// Game world definition
+const initialRooms = {
+  serviceDesk: {
+    description: "You are at the Service Desk of Summit 7. A computer hums, and a note lies on the desk. An incident report is pinned to a board. Exits: north to Engineering Lab, east to Client Network, west to Training Room, south to Security Vault.",
+    exits: { north: "engineeringLab", east: "clientNetwork", west: "trainingRoom", south: "securityVault" },
+    items: ["note", "incident report"],
+    state: {}
+  },
+  engineeringLab: {
+    description: "You are in the Engineering Lab. A computer with antivirus software is locked with a password prompt. A firewall config sits on a shelf. Exits: south to Service Desk, east to Incident Response Room, north to NOC.",
+    exits: { south: "serviceDesk", east: "incidentResponse", north: "noc" },
+    items: ["firewall config"],
+    state: { computer: 'locked' }
+  },
+  trainingRoom: {
+    description: "You are in the Training Room. A training manual rests on a table, offering cybersecurity basics. Exit: east to Service Desk.",
+    exits: { east: "serviceDesk" },
+    items: ["training manual"],
+    state: {}
+  },
+  securityVault: {
+    description: "You are in the Security Vault. A locked safe contains an encryption key. Exit: north to Service Desk.",
+    exits: { north: "serviceDesk" },
+    items: ["encryption key"],
+    state: {}
+  },
+  incidentResponse: {
+    description: "You are in the Incident Response Room. A whiteboard lists protocols, and a malware sample is in a secure container. An analyzer hums nearby. Exit: west to Engineering Lab.",
+    exits: { west: "engineeringLab" },
+    items: ["malware sample"],
+    state: {}
+  },
+  clientNetwork: {
+    description: "You are in the Client Network.\n" +
+                 "    ____\n" +
+                 "   /    \\\n" +
+                 "  /______\\\n" +
+                 "  | INF  | An infected server blinks red.\n" +
+                 "  |______|\n" +
+                 "A vulnerable gateway needs securing. Exit: west to Service Desk.",
+    exits: { west: "serviceDesk" },
+    items: [],
+    state: { server: 'infected' }
+  },
+  noc: {
+    description: "You are in the Network Operations Center (NOC). A console awaits final configurations to secure the network. Exit: south to Engineering Lab.",
+    exits: { south: "engineeringLab" },
+    items: [],
+    state: {}
+  }
+};
 
 // Initial game state
 const initialGameState = {
@@ -42,37 +77,10 @@ const initialGameState = {
 };
 
 // Game state variables
-let posX = 5.5, posY = 5.5; // Player position
-let dirX = -1, dirY = 0;   // Direction vector
-let planeX = 0, planeY = 0.66; // Camera plane (FOV)
+let currentRoom = "serviceDesk";
 let inventory = [];
 let gameState = { ...initialGameState };
-
-// Sprites for items and interactables
-const sprites = [
-  { x: 2.5, y: 2.5, type: 'note', img: new Image(), active: true },
-  { x: 3.5, y: 3.5, type: 'computer', img: new Image(), requires: 'note', action: unlockComputer }
-];
-
-// Texture and sprite images
-const textureNames = { 1: 'brick', 2: 'office', 3: 'lab', 4: 'server' };
-const textures = {};
-Object.keys(textureNames).forEach(id => {
-  const img = new Image();
-  img.src = `textures/${textureNames[id]}.png`; // Ensure textures are in a local folder
-  textures[id] = img;
-});
-
-const spriteImages = {
-  'note': 'sprites/note.png',
-  'computer': 'sprites/computer.png',
-  'antivirus': 'sprites/antivirus.png'
-};
-sprites.forEach(s => s.img.src = spriteImages[s.type]);
-
-// Canvas and context
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+let rooms = JSON.parse(JSON.stringify(initialRooms)); // Deep copy
 
 // Output text to the screen
 function output(text) {
@@ -85,172 +93,165 @@ function output(text) {
 
 // Reset game to initial state
 function resetGame(silent = false) {
-  posX = 5.5; posY = 5.5;
-  dirX = -1; dirY = 0;
-  planeX = 0; planeY = 0.66;
+  currentRoom = "serviceDesk";
   inventory = [];
   gameState = { ...initialGameState };
-  sprites.forEach(s => s.active = true);
+  rooms = JSON.parse(JSON.stringify(initialRooms)); // Reset rooms
   if (!silent) {
     output("Game reset. Starting over.");
+    look();
   }
 }
 
-// Render the 3D view
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let x = 0; x < canvas.width; x++) {
-    let cameraX = 2 * x / canvas.width - 1;
-    let rayDirX = dirX + planeX * cameraX;
-    let rayDirY = dirY + planeY * cameraX;
+// Look around the current room
+function look() {
+  if (!rooms[currentRoom]) {
+    output("Error: Current room not found. Resetting to Service Desk.");
+    currentRoom = "serviceDesk";
+  }
+  const room = rooms[currentRoom];
+  let description = room.description;
+  if (currentRoom === "engineeringLab") {
+    description = room.state.computer === 'locked'
+      ? "You are in the Engineering Lab. A computer with antivirus software is locked with a password prompt. A firewall config sits on a shelf."
+      : "You are in the Engineering Lab. The computer is unlocked, antivirus ready. A firewall config sits on a shelf.";
+  } else if (currentRoom === "clientNetwork") {
+    description = room.state.server === 'infected'
+      ? "You are in the Client Network.\n" +
+        "    ____\n" +
+        "   /    \\\n" +
+        "  /______\\\n" +
+        "  | INF  | An infected server blinks red.\n" +
+        "  |______|\n" +
+        "A vulnerable gateway needs securing. Exit: west to Service Desk."
+      : "You are in the Client Network. The server is clean and secure. A vulnerable gateway needs securing. Exit: west to Service Desk.";
+  }
 
-    let mapX = Math.floor(posX), mapY = Math.floor(posY);
-    let deltaDistX = Math.abs(1 / rayDirX), deltaDistY = Math.abs(1 / rayDirY);
-    let sideDistX, sideDistY, stepX, stepY;
+  if (room.items.length > 0) {
+    description += " You see: " + room.items.join(", ") + ".";
+  }
+  output(description);
+}
 
-    if (rayDirX < 0) { stepX = -1; sideDistX = (posX - mapX) * deltaDistX; }
-    else { stepX = 1; sideDistX = (mapX + 1 - posX) * deltaDistX; }
-    if (rayDirY < 0) { stepY = -1; sideDistY = (posY - mapY) * deltaDistY; }
-    else { stepY = 1; sideDistY = (mapY + 1 - posY) * deltaDistY; }
+// Move to another room
+function go(direction) {
+  if (!rooms[currentRoom]) {
+    output("Error: Current room not found. Resetting to Service Desk.");
+    currentRoom = "serviceDesk";
+    return;
+  }
+  const room = rooms[currentRoom];
+  if (room.exits[direction]) {
+    currentRoom = room.exits[direction];
+    look();
+  } else {
+    output("You can't go that way.");
+  }
+}
 
-    let hit = 0, side;
-    while (!hit) {
-      if (sideDistX < sideDistY) {
-        sideDistX += deltaDistX; mapX += stepX; side = 0;
-      } else {
-        sideDistY += deltaDistY; mapY += stepY; side = 1;
-      }
-      if (map[mapY][mapX] > 0) hit = 1;
+// Take an item
+function take(item) {
+  const room = rooms[currentRoom];
+  const index = room.items.indexOf(item);
+  if (index !== -1) {
+    inventory.push(item);
+    room.items.splice(index, 1);
+    output("You take the " + item + ".");
+  } else {
+    output("There is no " + item + " here.");
+  }
+}
+
+// Use an item on a target
+function use(item, target) {
+  if (currentRoom === "engineeringLab" && item === "note" && target === "computer" && inventory.includes("note")) {
+    if (rooms.engineeringLab.state.computer === 'locked') {
+      output("You enter the password from the note. The computer unlocks, and you copy the antivirus software to a USB drive.");
+      inventory.push("antivirus");
+      gameState.antivirusUnlocked = true;
+      rooms.engineeringLab.state.computer = 'unlocked';
+    } else {
+      output("The computer is already unlocked.");
     }
-
-    let perpWallDist = side == 0 ? (mapX - posX + (1 - stepX) / 2) / rayDirX : (mapY - posY + (1 - stepY) / 2) / rayDirY;
-    let lineHeight = Math.floor(canvas.height / perpWallDist);
-    let drawStart = Math.max(0, -lineHeight / 2 + canvas.height / 2);
-    let drawEnd = Math.min(canvas.height, lineHeight / 2 + canvas.height / 2);
-
-    // Texture mapping
-    let wallX = side == 0 ? posY + perpWallDist * rayDirY : posX + perpWallDist * rayDirX;
-    wallX -= Math.floor(wallX);
-    let texX = Math.floor(wallX * textures[map[mapY][mapX]].width);
-    if (side == 0 && rayDirX > 0) texX = textures[map[mapY][mapX]].width - texX - 1;
-    if (side == 1 && rayDirY < 0) texX = textures[map[mapY][mapX]].width - texX - 1;
-
-    ctx.drawImage(textures[map[mapY][mapX]], texX, 0, 1, textures[map[mapY][mapX]].height, x, drawStart, 1, drawEnd - drawStart);
-  }
-}
-
-// Render sprites
-function renderSprites() {
-  sprites.forEach(sprite => {
-    if (!sprite.active) return;
-    let spriteX = sprite.x - posX, spriteY = sprite.y - posY;
-    let inv = dirX * spriteY - dirY * spriteX;
-    let transformY = (dirY * spriteX + dirX * spriteY) / inv;
-    if (transformY <= 0) return;
-
-    let spriteScreenX = Math.floor((canvas.width / 2) * (1 + spriteX / transformY));
-    let spriteHeight = Math.abs(Math.floor(canvas.height / transformY));
-    ctx.drawImage(sprite.img, spriteScreenX - spriteHeight / 2, canvas.height / 2 - spriteHeight / 2, spriteHeight, spriteHeight);
-  });
-}
-
-// Player movement
-let moveForward = false, moveBackward = false, turnLeft = false, turnRight = false;
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowUp') moveForward = true;
-  if (e.key === 'ArrowDown') moveBackward = true;
-  if (e.key === 'ArrowLeft') turnLeft = true;
-  if (e.key === 'ArrowRight') turnRight = true;
-  if (e.key === 'e') interact();
-});
-
-document.addEventListener('keyup', e => {
-  if (e.key === 'ArrowUp') moveForward = false;
-  if (e.key === 'ArrowDown') moveBackward = false;
-  if (e.key === 'ArrowLeft') turnLeft = false;
-  if (e.key === 'ArrowRight') turnRight = false;
-});
-
-function updatePlayer() {
-  const moveSpeed = 0.1, rotSpeed = 0.05;
-  if (moveForward) {
-    let newX = posX + dirX * moveSpeed, newY = posY + dirY * moveSpeed;
-    if (map[Math.floor(newY)][Math.floor(newX)] == 0) { posX = newX; posY = newY; }
-  }
-  if (moveBackward) {
-    let newX = posX - dirX * moveSpeed, newY = posY - dirY * moveSpeed;
-    if (map[Math.floor(newY)][Math.floor(newX)] == 0) { posX = newX; posY = newY; }
-  }
-  if (turnLeft) {
-    let oldDirX = dirX;
-    dirX = dirX * Math.cos(rotSpeed) - dirY * Math.sin(rotSpeed);
-    dirY = oldDirX * Math.sin(rotSpeed) + dirY * Math.cos(rotSpeed);
-    let oldPlaneX = planeX;
-    planeX = planeX * Math.cos(rotSpeed) - planeY * Math.sin(rotSpeed);
-    planeY = oldPlaneX * Math.sin(rotSpeed) + planeY * Math.cos(rotSpeed);
-  }
-  if (turnRight) {
-    let oldDirX = dirX;
-    dirX = dirX * Math.cos(-rotSpeed) - dirY * Math.sin(-rotSpeed);
-    dirY = oldDirX * Math.sin(-rotSpeed) + dirY * Math.cos(-rotSpeed);
-    let oldPlaneX = planeX;
-    planeX = planeX * Math.cos(-rotSpeed) - planeY * Math.sin(-rotSpeed);
-    planeY = oldPlaneX * Math.sin(-rotSpeed) + planeY * Math.cos(-rotSpeed);
-  }
-}
-
-// Interact with sprites
-function interact() {
-  sprites.forEach(sprite => {
-    if (!sprite.active) return;
-    let dist = Math.sqrt((posX - sprite.x) ** 2 + (posY - sprite.y) ** 2);
-    if (dist < 0.5) {
-      if (sprite.type in spriteImages) {
-        inventory.push(sprite.type);
-        sprite.active = false;
-        output(`You take the ${sprite.type}.`);
-        updateInventory();
-      } else if (sprite.requires && inventory.includes(sprite.requires)) {
-        sprite.action();
-        sprite.active = false;
-      }
+  } else if (currentRoom === "incidentResponse" && item === "malware sample" && target === "analyzer" && inventory.includes("malware sample")) {
+    output("You analyze the malware sample. It reveals a vulnerability needing a patch.");
+    inventory.push("security patch");
+    gameState.malwareAnalyzed = true;
+  } else if (currentRoom === "clientNetwork" && item === "antivirus" && target === "server" && inventory.includes("antivirus")) {
+    if (rooms.clientNetwork.state.server === 'infected') {
+      output("You run the antivirus on the infected server. The malware is eradicated.");
+      rooms.clientNetwork.state.server = 'clean';
+      checkVictory();
+    } else {
+      output("The server is already clean.");
     }
-  });
+  } else if (currentRoom === "clientNetwork" && item === "security patch" && target === "gateway" && inventory.includes("security patch") && gameState.malwareAnalyzed) {
+    output("You apply the security patch to the vulnerable gateway.");
+    gameState.patchApplied = true;
+    checkVictory();
+  } else if (currentRoom === "noc" && item === "firewall config" && target === "console" && inventory.includes("firewall config") && gameState.trained) {
+    output("You configure the firewall on the NOC console, blocking further intrusions.");
+    gameState.firewallDeployed = true;
+    checkVictory();
+  } else {
+    output("You can't use " + item + " on " + target + " here.");
+  }
 }
 
-// Example action for computer
-function unlockComputer() {
-  gameState.antivirusUnlocked = true;
-  inventory.push('antivirus');
-  output('You unlock the computer with the note.');
-  updateInventory();
+// Check for victory condition
+function checkVictory() {
+  if (gameState.antivirusUnlocked && gameState.patchApplied && gameState.firewallDeployed) {
+    output("The network is fully secure. Victory!");
+  } else {
+    output("Progress made, but the network isn't fully secure yet.");
+  }
 }
 
-// Update inventory UI
-function updateInventory() {
-  const invDiv = document.getElementById('inventory');
-  invDiv.innerHTML = 'Inventory: ';
-  inventory.forEach(item => {
-    const img = document.createElement('img');
-    img.src = spriteImages[item] || 'sprites/default.png';
-    img.style.width = '32px';
-    invDiv.appendChild(img);
-  });
+// Read an item
+function read(item) {
+  if (inventory.includes(item)) {
+    if (item === "note") {
+      output("The note reads: 'Password: Summit7Cyber'.");
+    } else if (item === "training manual") {
+      output("The manual teaches you to analyze logs and configure firewalls. You feel prepared.");
+      gameState.trained = true;
+    } else if (item === "incident report") {
+      output("The report states: 'Client network compromised. Malware detected. Secure servers and gateway.'");
+    } else {
+      output("There's nothing to read on the " + item + ".");
+    }
+  } else {
+    output("You don't have a " + item + " to read.");
+  }
 }
 
-// Menu functionality
-document.getElementById('menuButton').addEventListener('click', () => {
-  const menu = document.getElementById('menu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-});
-document.getElementById('newGame').addEventListener('click', () => resetGame(false));
-document.getElementById('saveGame').addEventListener('click', saveGame);
-document.getElementById('loadGame').addEventListener('click', () => loadGame(auth.currentUser.uid));
-document.getElementById('logout').addEventListener('click', logout);
-document.getElementById('exit').addEventListener('click', () => window.close());
+// Show inventory
+function inventoryCommand() {
+  if (inventory.length === 0) {
+    output("Your inventory is empty.");
+  } else {
+    output("You are carrying: " + inventory.join(", "));
+  }
+}
 
-// Firebase Authentication Functions
+// Show help
+function help() {
+  output("Commands:\n" +
+         "- go [direction]: Move (e.g., 'go north')\n" +
+         "- take [item]: Pick up an item (e.g., 'take note')\n" +
+         "- use [item] on [target]: Use an item (e.g., 'use note on computer')\n" +
+         "- read [item]: Examine an item (e.g., 'read manual')\n" +
+         "- look: View the room\n" +
+         "- inventory: Check your items\n" +
+         "- save: Save your game\n" +
+         "- load: Load your game\n" +
+         "- new: Start a new game\n" +
+         "- logout: Log out and return to the login screen\n" +
+         "- help: Show this message\n" +
+         "Hint: Explore rooms and read items for clues!");
+}
+
+// **Firebase Authentication Functions**
 function signUp(email, password) {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
@@ -277,7 +278,7 @@ function logIn(email, password) {
     });
 }
 
-// Google Login Function
+// **Google Login Function**
 function logInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
@@ -292,14 +293,18 @@ function logInWithGoogle() {
     });
 }
 
-// Logout Function
+// **Logout Function**
 function logout() {
   auth.signOut()
     .then(() => {
+      // Reset game state silently
       resetGame(true);
+      // Clear output
       document.getElementById('output').innerHTML = '';
+      // Update UI
       document.getElementById('gameScreen').style.display = 'none';
       document.getElementById('loginScreen').style.display = 'block';
+      // Display message on login screen
       document.getElementById('authMessage').textContent = "You have been logged out.";
     })
     .catch((error) => {
@@ -312,8 +317,12 @@ function saveGame() {
   const user = auth.currentUser;
   if (user) {
     const saveData = {
-      posX, posY, dirX, dirY, planeX, planeY, inventory, gameState,
-      sprites: sprites.map(s => ({ ...s, img: null }))
+      currentRoom: currentRoom,
+      inventory: inventory,
+      gameState: gameState,
+      rooms: Object.fromEntries(
+        Object.entries(rooms).map(([key, room]) => [key, { state: room.state }])
+      )
     };
     database.ref('users/' + user.uid + '/save').set(saveData)
       .then(() => {
@@ -332,18 +341,23 @@ function loadGame(uid) {
     .then((snapshot) => {
       const data = snapshot.val();
       if (data) {
-        posX = data.posX; posY = data.posY;
-        dirX = data.dirX; dirY = data.dirY;
-        planeX = data.planeX; planeY = data.planeY;
-        inventory = data.inventory || [];
-        gameState = data.gameState || {};
-        if (data.sprites) {
-          data.sprites.forEach((savedSprite, i) => {
-            sprites[i].active = savedSprite.active;
+        currentRoom = data.currentRoom;
+        // Check if currentRoom exists in rooms
+        if (!rooms[currentRoom]) {
+          output("Saved room not found. Starting from Service Desk.");
+          currentRoom = "serviceDesk";
+        }
+        inventory = data.inventory || []; // Default to empty array if undefined
+        gameState = data.gameState || {}; // Default to empty object if undefined
+        if (data.rooms) {
+          Object.keys(rooms).forEach(key => {
+            if (data.rooms[key]) {
+              rooms[key].state = data.rooms[key].state;
+            }
           });
         }
-        updateInventory();
         output("Game loaded successfully!");
+        look();
       } else {
         output("No saved game found. Starting a new game.");
         resetGame(false);
@@ -354,50 +368,134 @@ function loadGame(uid) {
     });
 }
 
-// Game loop
-function gameLoop() {
-  updatePlayer();
-  render();
-  renderSprites();
-  requestAnimationFrame(gameLoop);
-}
-gameLoop();
+// Natural language parser
+function parseInput(input) {
+  const synonyms = {
+    go: ["go", "move", "walk", "head", "proceed"],
+    take: ["take", "pick up", "grab", "get", "acquire"],
+    use: ["use", "apply", "utilize", "employ"],
+    look: ["look", "examine", "inspect", "view"],
+    read: ["read", "peruse", "study", "check"],
+    inventory: ["inventory", "items", "possessions"],
+    help: ["help", "assist", "guide", "instructions"],
+    save: ["save", "store"],
+    load: ["load", "restore"],
+    new: ["new", "start over", "reset"],
+    logout: ["logout", "sign out"]
+  };
 
-// Authentication state listener
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'block';
-    loadGame(user.uid);
+  const directions = ["north", "south", "east", "west"];
+  const words = input.trim().toLowerCase().split(" ");
+  let command = words[0];
+  let argument = words.slice(1).join(" ");
+
+  for (const [action, synList] of Object.entries(synonyms)) {
+    if (synList.includes(command)) {
+      command = action;
+      break;
+    }
+  }
+
+  if (command === "go" && directions.includes(words[1])) {
+    return { command: "go", argument: words[1] };
+  } else if (command === "take") {
+    return { command: "take", argument: argument };
+  } else if (command === "use" && argument.includes(" on ")) {
+    const parts = argument.split(" on ");
+    return { command: "use", argument: { item: parts[0].trim(), target: parts[1].trim() } };
+  } else if (command === "read") {
+    return { command: "read", argument: argument };
+  } else if (["look", "inventory", "help", "save", "load", "new", "logout"].includes(command)) {
+    return { command, argument: "" };
   } else {
-    document.getElementById('loginScreen').style.display = 'block';
-    document.getElementById('gameScreen').style.display = 'none';
-    document.getElementById('authMessage').textContent = "Please log in to play.";
+    return { command: "unknown", argument: "" };
   }
-});
+}
 
-// Event listeners for authentication buttons
-document.getElementById('signUpButton').addEventListener('click', () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  signUp(email, password);
-});
-
-document.getElementById('logInButton').addEventListener('click', () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  logIn(email, password);
-});
-
-document.getElementById('googleLogInButton').addEventListener('click', logInWithGoogle);
-
-// Handle command input (for text-based interactions if needed)
-const input = document.getElementById("commandInput");
-input.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    const inputText = input.value;
-    input.value = "";
-    output("> " + inputText);
-    // Add command parsing here if desired
+// Handle commands
+function handleCommand(command, argument) {
+  if (command === "new") {
+    resetGame(false); // Not silent
+  } else if (command === "logout") {
+    logout();
+  } else {
+    switch (command) {
+      case "look":
+        look();
+        break;
+      case "go":
+        go(argument);
+        break;
+      case "take":
+        take(argument);
+        break;
+      case "use":
+        use(argument.item, argument.target);
+        break;
+      case "read":
+        read(argument);
+        break;
+      case "inventory":
+        inventoryCommand();
+        break;
+      case "help":
+        help();
+        break;
+      case "save":
+        saveGame();
+        break;
+      case "load":
+        const user = auth.currentUser;
+        if (user) loadGame(user.uid);
+        else output("Please log in to load your game.");
+        break;
+      default:
+        output("Unknown command. Type 'help' for assistance.");
+    }
   }
+}
+
+// Initialize game and set up event listeners
+document.addEventListener("DOMContentLoaded", () => {
+  // Sign Up Button
+  document.getElementById('signUpButton').addEventListener('click', () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    signUp(email, password);
+  });
+
+  // Log In Button
+  document.getElementById('logInButton').addEventListener('click', () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    logIn(email, password);
+  });
+
+  // Google Log In Button
+  document.getElementById('googleLogInButton').addEventListener('click', logInWithGoogle);
+
+  // Handle input
+  const input = document.getElementById("commandInput");
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const inputText = input.value;
+      input.value = "";
+      output("> " + inputText);
+      const { command, argument } = parseInput(inputText);
+      handleCommand(command, argument);
+    }
+  });
+
+  // Authentication state listener
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('gameScreen').style.display = 'block';
+      loadGame(user.uid);
+    } else {
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('gameScreen').style.display = 'none';
+      document.getElementById('authMessage').textContent = "Please log in to play.";
+    }
+  });
 });
