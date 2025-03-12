@@ -52,9 +52,3 @@ A text-based adventure game inspired by the classic Zork, set in a cybersecurity
    - Read items like the note and manual for critical information.
    - Use `help` if stuck, and check your `inventory` to track progress.
    - Save frequently to preserve your game state in the cloud.
-
-## Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/fubak/summit7-zork.git

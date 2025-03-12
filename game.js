@@ -16,7 +16,7 @@ const auth = firebase.auth();
 const database = firebase.database();
 
 // Game world definition
-const rooms = {
+const initialRooms = {
   serviceDesk: {
     description: "You are at the Service Desk of Summit 7. A computer hums, and a note lies on the desk. An incident report is pinned to a board. Exits: north to Engineering Lab, east to Client Network, west to Training Room, south to Security Vault.",
     exits: { north: "engineeringLab", east: "clientNetwork", west: "trainingRoom", south: "securityVault" },
@@ -80,6 +80,7 @@ const initialGameState = {
 let currentRoom = "serviceDesk";
 let inventory = [];
 let gameState = { ...initialGameState };
+let rooms = JSON.parse(JSON.stringify(initialRooms)); // Deep copy
 
 // Output text to the screen
 function output(text) {
@@ -91,16 +92,15 @@ function output(text) {
 }
 
 // Reset game to initial state
-function resetGame() {
+function resetGame(silent = false) {
   currentRoom = "serviceDesk";
   inventory = [];
   gameState = { ...initialGameState };
-  rooms.engineeringLab.state = { computer: 'locked' };
-  rooms.clientNetwork.state = { server: 'infected' };
-  rooms.incidentResponse.state = {};
-  rooms.noc.state = {};
-  output("Game reset. Starting over.");
-  look();
+  rooms = JSON.parse(JSON.stringify(initialRooms)); // Reset rooms
+  if (!silent) {
+    output("Game reset. Starting over.");
+    look();
+  }
 }
 
 // Look around the current room
@@ -238,6 +238,7 @@ function help() {
          "- save: Save your game\n" +
          "- load: Load your game\n" +
          "- new: Start a new game\n" +
+         "- logout: Log out and return to the login screen\n" +
          "- help: Show this message\n" +
          "Hint: Explore rooms and read items for clues!");
 }
@@ -269,6 +270,7 @@ function logIn(email, password) {
     });
 }
 
+// **Google Login Function**
 function logInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
@@ -283,17 +285,24 @@ function logInWithGoogle() {
     });
 }
 
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    document.getElementById("loginScreen").style.display = "none";
-    document.getElementById("gameScreen").style.display = "block";
-    loadGame(user.uid);
-  } else {
-    document.getElementById("loginScreen").style.display = "block";
-    document.getElementById("gameScreen").style.display = "none";
-    output("Please log in to continue.");
-  }
-});
+// **Logout Function**
+function logout() {
+  auth.signOut()
+    .then(() => {
+      // Reset game state silently
+      resetGame(true);
+      // Clear output
+      document.getElementById('output').innerHTML = '';
+      // Update UI
+      document.getElementById('gameScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+      // Display message on login screen
+      document.getElementById('authMessage').textContent = "You have been logged out.";
+    })
+    .catch((error) => {
+      output("Error logging out: " + error.message);
+    });
+}
 
 // Cloud Save and Load
 function saveGame() {
@@ -328,13 +337,15 @@ function loadGame(uid) {
         inventory = data.inventory;
         gameState = data.gameState;
         Object.keys(rooms).forEach(key => {
-          rooms[key].state = data.rooms[key].state;
+          if (data.rooms[key]) {
+            rooms[key].state = data.rooms[key].state;
+          }
         });
         output("Game loaded successfully!");
         look();
       } else {
         output("No saved game found. Starting a new game.");
-        resetGame();
+        resetGame(false);
       }
     })
     .catch((error) => {
@@ -354,7 +365,8 @@ function parseInput(input) {
     help: ["help", "assist", "guide", "instructions"],
     save: ["save", "store"],
     load: ["load", "restore"],
-    new: ["new", "start over", "reset"]
+    new: ["new", "start over", "reset"],
+    logout: ["logout", "sign out"]
   };
 
   const directions = ["north", "south", "east", "west"];
@@ -378,7 +390,7 @@ function parseInput(input) {
     return { command: "use", argument: { item: parts[0].trim(), target: parts[1].trim() } };
   } else if (command === "read") {
     return { command: "read", argument: argument };
-  } else if (["look", "inventory", "help", "save", "load", "new"].includes(command)) {
+  } else if (["look", "inventory", "help", "save", "load", "new", "logout"].includes(command)) {
     return { command, argument: "" };
   } else {
     return { command: "unknown", argument: "" };
@@ -388,7 +400,9 @@ function parseInput(input) {
 // Handle commands
 function handleCommand(command, argument) {
   if (command === "new") {
-    resetGame();
+    resetGame(false); // Not silent
+  } else if (command === "logout") {
+    logout();
   } else {
     switch (command) {
       case "look":
@@ -445,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Google Log In Button
   document.getElementById('googleLogInButton').addEventListener('click', logInWithGoogle);
 
-  // Existing command input listener
+  // Handle input
   const input = document.getElementById("commandInput");
   input.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
@@ -457,6 +471,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
-  look();
+  // Authentication state listener
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('gameScreen').style.display = 'block';
+      loadGame(user.uid);
+    } else {
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('gameScreen').style.display = 'none';
+      document.getElementById('authMessage').textContent = "Please log in to play.";
+    }
+  });
 });

@@ -70,18 +70,16 @@
 SUMMIT 7 - CYBERSECURITY CRISIS
   </div>
   <div id="loginScreen">
-    <div id="auth">
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <button id="signUpButton">Sign Up</button>
-      <button id="logInButton">Log In</button>
-      <button id="googleLogInButton">Log In with Google</button>
-      <div id="authMessage">Welcome to Summit 7: Cybersecurity Crisis. Sign up or log in to start.</div>
-    </div>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button id="signUpButton">Sign Up</button>
+    <button id="logInButton">Log In</button>
+    <button id="googleLogInButton">Log In with Google</button>
+    <div id="authMessage"></div>
   </div>
-  <div id="gameScreen">
+  <div id="gameScreen" style="display: none;">
     <div id="output"></div>
-    <input type="text" id="commandInput" placeholder="Enter command...">
+    <input id="commandInput" type="text" placeholder="Enter command">
   </div>
   <!-- Firebase SDKs (local) -->
   <script src="firebase/firebase-app-compat.js"></script>
