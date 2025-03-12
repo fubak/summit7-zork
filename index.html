@@ -75,20 +75,23 @@
     <div id="auth">
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Password">
-      <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
-      <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button>
-      <button onclick="logInWithGoogle()">Log In with Google</button>
-      <div id="authMessage"></div>
+      <button id="signUpButton">Sign Up</button>
+      <button id="logInButton">Log In</button>
+      <button id="googleLogInButton">Log In with Google</button>
+      <div id="authMessage">Welcome to Summit 7: Cybersecurity Crisis. Sign up or log in to start.</div>
     </div>
   </div>
   <div id="gameScreen">
     <div id="output"></div>
     <input type="text" id="commandInput" placeholder="Enter command...">
   </div>
-  <!-- Firebase SDKs (Using compat versions with defer) -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- Firebase SDKs (local) -->
+  <script defer src="firebase/firebase-app-compat.js"></script>
+  <script>console.log("Firebase App Compat Loaded:", typeof firebase !== 'undefined' ? "Yes" : "No");</script>
+  <script defer src="firebase/firebase-auth-compat.js"></script>
+  <script>console.log("Firebase Auth Compat Loaded:", typeof firebase !== 'undefined' ? "Yes" : "No");</script>
+  <script defer src="firebase/firebase-database-compat.js"></script>
+  <script>console.log("Firebase Database Compat Loaded:", typeof firebase !== 'undefined' ? "Yes" : "No");</script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -1,28 +1,36 @@
-// ASCII Art Title
-const title = `
-  _____ _   _ __  __ __  __ _____ _______   ___  
- / ____| | | |  \/  |  \/  |_   _|__   __| |__ \\ 
-| (___ | | | | \\  / | \\  / | | |    | |       ) |
- \\___ \\| | | | |\/| | |\/| | | |    | |      / / 
- ____) | |_| | |  | | |  | |_| |_   | |     / /_ 
-|_____/ \\___/|_|  |_|_|  |_|_____|  |_|    |____|
-`;
-
-// Firebase Configuration (replace with your own from Firebase Console)
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "YOUR_DATABASE_URL",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDZPdAtqmvGSc0-CSr5CYH5cQcV7ez3qgg",
+  authDomain: "summit-7-zork.firebaseapp.com",
+  databaseURL: "https://summit-7-zork-default-rtdb.firebaseio.com",
+  projectId: "summit-7-zork",
+  storageBucket: "summit-7-zork.firebasestorage.app",
+  messagingSenderId: "631600869041",
+  appId: "1:631600869041:web:695fda880031d0a5c87c90",
+  measurementId: "G-VLDLBLWK1P"
 };
 
-// Check if Firebase is loaded before initializing
-if (typeof firebase === 'undefined') {
-  console.error("Firebase SDK not loaded. Check script tags in index.html.");
-} else {
+// Output text to the screen
+function output(text) {
+  const outputDiv = document.getElementById("output");
+  if (outputDiv) {
+    const p = document.createElement("p");
+    p.textContent = text;
+    outputDiv.appendChild(p);
+    outputDiv.scrollTop = outputDiv.scrollHeight;
+  } else {
+    console.error("Output div not found.");
+  }
+}
+
+// Wait for DOM content to load before initializing Firebase
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof firebase === 'undefined') {
+    console.error("Firebase SDK not loaded. Check script tags in index.html.");
+    document.getElementById("authMessage").textContent = "Error: Firebase SDK failed to load. Please refresh or check your network.";
+    return;
+  }
+
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
@@ -83,19 +91,6 @@ if (typeof firebase === 'undefined') {
     firewallDeployed: false,
     trained: false
   };
-
-  // Output text to the screen
-  function output(text) {
-    const outputDiv = document.getElementById("output");
-    if (outputDiv) {
-      const p = document.createElement("p");
-      p.textContent = text;
-      outputDiv.appendChild(p);
-      outputDiv.scrollTop = outputDiv.scrollHeight;
-    } else {
-      console.error("Output div not found.");
-    }
-  }
 
   // Natural language command parser
   function parseInput(input) {
@@ -167,7 +162,7 @@ if (typeof firebase === 'undefined') {
         saveGame();
         break;
       case "load":
-        loadGame();
+        loadGame(auth.currentUser.uid);
         break;
       case "unknown":
         output("I don't understand that command. Try 'help' for guidance.");
@@ -372,19 +367,30 @@ if (typeof firebase === 'undefined') {
       });
   }
 
-  // Initialize game and handle input
-  document.addEventListener("DOMContentLoaded", () => {
-    output(title);
-    output("Welcome to Summit 7: Cybersecurity Crisis. Sign up or log in to start.");
-    const input = document.getElementById("commandInput");
-    input.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        const inputText = input.value;
-        input.value = "";
-        output("> " + inputText);
-        const { command, argument } = parseInput(inputText);
-        handleCommand(command, argument);
-      }
-    });
+  // Add event listeners for buttons
+  document.getElementById("signUpButton").addEventListener("click", () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    signUp(email, password);
   });
-}
+
+  document.getElementById("logInButton").addEventListener("click", () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    logIn(email, password);
+  });
+
+  document.getElementById("googleLogInButton").addEventListener("click", logInWithGoogle);
+
+  // Handle input
+  const input = document.getElementById("commandInput");
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const inputText = input.value;
+      input.value = "";
+      output("> " + inputText);
+      const { command, argument } = parseInput(inputText);
+      handleCommand(command, argument);
+    }
+  });
+});
