@@ -70,16 +70,18 @@
 SUMMIT 7 - CYBERSECURITY CRISIS
   </div>
   <div id="loginScreen">
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button id="signUpButton">Sign Up</button>
-    <button id="logInButton">Log In</button>
-    <button id="googleLogInButton">Log In with Google</button>
-    <div id="authMessage"></div>
+    <div id="auth">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button id="signUpButton">Sign Up</button>
+      <button id="logInButton">Log In</button>
+      <button id="googleLogInButton">Log In with Google</button>
+      <div id="authMessage">Welcome to Summit 7: Cybersecurity Crisis. Sign up or log in to start.</div>
+    </div>
   </div>
   <div id="gameScreen" style="display: none;">
     <div id="output"></div>
-    <input id="commandInput" type="text" placeholder="Enter command">
+    <input type="text" id="commandInput" placeholder="Enter command...">
   </div>
   <!-- Firebase SDKs (local) -->
   <script src="firebase/firebase-app-compat.js"></script>
@@ -89,7 +91,5 @@ SUMMIT 7 - CYBERSECURITY CRISIS
   <script src="firebase/firebase-database-compat.js"></script>
   <script>console.log("Firebase Database Compat Loaded:", typeof firebase !== 'undefined' ? "Yes" : "No");</script>
   <script src="game.js"></script>
-  <!-- Cloudflare script commented out for local development -->
-  <!-- <script>(function(){...})();</script> -->
 </body>
 </html>
