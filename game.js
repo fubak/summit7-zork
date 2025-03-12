@@ -9,6 +9,7 @@ const firebaseConfig = {
   appId: "1:631600869041:web:695fda880031d0a5c87c90",
   measurementId: "G-VLDLBLWK1P"
 };
+
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -246,6 +247,9 @@ function signUp(email, password) {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
       output("Account created successfully!");
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "block";
+      loadGame(userCredential.user.uid);
     })
     .catch((error) => {
       output("Error: " + error.message);
@@ -256,6 +260,8 @@ function logIn(email, password) {
   auth.signInWithEmailAndPassword(email, password)
     .then((userCredential) => {
       output("Logged in successfully!");
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "block";
       loadGame(userCredential.user.uid);
     })
     .catch((error) => {
@@ -263,18 +269,31 @@ function logIn(email, password) {
     });
 }
 
-// **Google Login Function**
 function logInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
     .then((result) => {
       output("Logged in with Google successfully!");
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "block";
       loadGame(result.user.uid);
     })
     .catch((error) => {
       output("Error: " + error.message);
     });
 }
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+    loadGame(user.uid);
+  } else {
+    document.getElementById("loginScreen").style.display = "block";
+    document.getElementById("gameScreen").style.display = "none";
+    output("Please log in to continue.");
+  }
+});
 
 // Cloud Save and Load
 function saveGame() {
@@ -409,6 +428,24 @@ function handleCommand(command, argument) {
 
 // Initialize game and set up event listeners
 document.addEventListener("DOMContentLoaded", () => {
+  // Sign Up Button
+  document.getElementById('signUpButton').addEventListener('click', () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    signUp(email, password);
+  });
+
+  // Log In Button
+  document.getElementById('logInButton').addEventListener('click', () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    logIn(email, password);
+  });
+
+  // Google Log In Button
+  document.getElementById('googleLogInButton').addEventListener('click', logInWithGoogle);
+
+  // Existing command input listener
   const input = document.getElementById("commandInput");
   input.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
@@ -419,6 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
       handleCommand(command, argument);
     }
   });
+
   output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
   look();
 });

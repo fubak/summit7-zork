@@ -16,9 +16,9 @@
     #title {
       text-align: center;
       margin-bottom: 20px;
-      font-family: monospace; /* Ensures equal character width */
-      font-size: 16px;       /* Consistent size; adjust if needed */
-      line-height: 1.2;      /* Matches typical ASCII art spacing */
+      font-family: monospace;
+      font-size: 16px;
+      line-height: 1.2;
     }
     #loginScreen, #gameScreen {
       max-width: 800px;
@@ -91,5 +91,7 @@ SUMMIT 7 - CYBERSECURITY CRISIS
   <script src="firebase/firebase-database-compat.js"></script>
   <script>console.log("Firebase Database Compat Loaded:", typeof firebase !== 'undefined' ? "Yes" : "No");</script>
   <script src="game.js"></script>
+  <!-- Cloudflare script commented out for local development -->
+  <!-- <script>(function(){...})();</script> -->
 </body>
 </html>
