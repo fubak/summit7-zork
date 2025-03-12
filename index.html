@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cybersecurity Zork Clone - Summit 7</title>
+  <title>Summit 7 Zork Clone</title>
   <style>
     body {
       background-color: #000;
@@ -31,21 +31,31 @@
     #commandInput:focus {
       border-color: #0ff;
     }
+    #auth {
+      margin-bottom: 20px;
+    }
+    #auth input, #auth button {
+      margin: 5px;
+      padding: 5px;
+      background-color: #111;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 </head>
 <body>
-  <div id="output"></div>
-  <input type="text" id="commandInput" placeholder="Enter command...">
-  <script src="game.js"></script>
-
   <div id="auth">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
     <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
     <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button>
   </div>
+  <div id="output"></div>
+  <input type="text" id="commandInput" placeholder="Enter command...">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>

@@ -1,93 +1,30 @@
 // ASCII Art Title
 const title = `
-   _____ _    _ __  __ __  __ _____ _______   ______ 
-  / ____| |  | |  \/  |  \/  |_   _|__   __| |____  |
- | (___ | |  | | \  / | \  / | | |    | |        / / 
-  \___ \| |  | | |\/| | |\/| | | |    | |       / /  
-  ____) | |__| | |  | | |  | |_| |_   | |      / /   
- |_____/ \____/|_|  |_|_|  |_|_____|  |_|     /_/                                                   
+  _____ _   _ __  __ __  __ _____ _______   ___  
+ / ____| | | |  \\/  |  \\/  |_   _|__   __| |__ \\ 
+| (___ | | | | \\  / | \\  / | | |    | |       ) |
+ \\___ \\| | | | |\\/| | |\\/| | | |    | |      / / 
+ ____) | |_| | |  | | |  | |_| |_   | |     / /_ 
+|_____/ \\___/|_|  |_|_|  |_|_____|  |_|    |____|
 `;
 
-console.log(title);
-
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DATABASE_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+  apiKey: "AIzaSyDZPdAtqmvGSc0-CSr5CYH5cQcV7ez3qgg",
+  authDomain: "summit-7-zork.firebaseapp.com",
+  databaseURL: "https://summit-7-zork-default-rtdb.firebaseio.com",
+  projectId: "summit-7-zork",
+  storageBucket: "summit-7-zork.firebasestorage.app",
+  messagingSenderId: "631600869041",
+  appId: "1:631600869041:web:695fda880031d0a5c87c90",
+  measurementId: "G-VLDLBLWK1P"
+};
+
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-function signUp(email, password) {
-    auth.createUserWithEmailAndPassword(email, password)
-      .then((userCredential) => {
-        output("Account created successfully!");
-      })
-      .catch((error) => {
-        output("Error: " + error.message);
-      });
-  }
-  
-  function logIn(email, password) {
-    auth.signInWithEmailAndPassword(email, password)
-      .then((userCredential) => {
-        output("Logged in successfully!");
-        loadGame(userCredential.user.uid);
-      })
-      .catch((error) => {
-        output("Error: " + error.message);
-      });
-  }
-
-  function saveGame() {
-    const user = auth.currentUser;
-    if (user) {
-      const saveData = {
-        currentRoom: currentRoom,
-        inventory: inventory,
-        gameState: gameState
-      };
-      database.ref('users/' + user.uid + '/save').set(saveData)
-        .then(() => {
-          output("Game saved successfully!");
-        })
-        .catch((error) => {
-          output("Error saving game: " + error.message);
-        });
-    } else {
-      output("You need to be logged in to save the game.");
-    }
-  }
-
-  function loadGame(uid) {
-    database.ref('users/' + uid + '/save').once('value')
-      .then((snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          currentRoom = data.currentRoom;
-          inventory = data.inventory;
-          gameState = data.gameState;
-          output("Game loaded successfully!");
-          look(); // Assuming look() shows the current room
-        } else {
-          output("No saved game found. Starting a new game.");
-          currentRoom = "serviceDesk"; // Default starting room
-          inventory = [];
-          gameState = { /* Default flags */ };
-          look();
-        }
-      })
-      .catch((error) => {
-        output("Error loading game: " + error.message);
-      });
-  }
-
-// Define the game world with rooms
+// Game world
 const rooms = {
   serviceDesk: {
     description: "You are at the Service Desk of Summit 7. A computer hums, and a note lies on the desk. An incident report is pinned to a board. Exits: north to Engineering Lab, east to Client Network, west to Training Room, south to Security Vault.",
@@ -152,7 +89,7 @@ function output(text) {
   outputDiv.scrollTop = outputDiv.scrollHeight;
 }
 
-// Enhanced command parser with natural language capabilities
+// Natural language command parser
 function parseInput(input) {
   const synonyms = {
     go: ["go", "move", "walk", "head", "proceed"],
@@ -161,7 +98,9 @@ function parseInput(input) {
     look: ["look", "examine", "inspect", "view"],
     read: ["read", "peruse", "study", "check"],
     inventory: ["inventory", "items", "possessions"],
-    help: ["help", "assist", "guide", "instructions"]
+    help: ["help", "assist", "guide", "instructions"],
+    save: ["save", "store"],
+    load: ["load", "restore"]
   };
 
   const directions = ["north", "south", "east", "west"];
@@ -169,7 +108,6 @@ function parseInput(input) {
   let command = words[0];
   let argument = words.slice(1).join(" ");
 
-  // Check for synonyms
   for (const [action, synList] of Object.entries(synonyms)) {
     if (synList.includes(command)) {
       command = action;
@@ -177,14 +115,6 @@ function parseInput(input) {
     }
   }
 
-  if (command === "save") {
-    saveGame();
-  } else if (command === "load") {
-    const user = auth.currentUser;
-    if (user) loadGame(user.uid);
-    else output("Please log in to load your game.");
-  }
-  
   if (command === "go" && directions.includes(words[1])) {
     return { command: "go", argument: words[1] };
   } else if (command === "take") {
@@ -194,14 +124,14 @@ function parseInput(input) {
     return { command: "use", argument: { item: parts[0].trim(), target: parts[1].trim() } };
   } else if (command === "read") {
     return { command: "read", argument: argument };
-  } else if (command === "look" || command === "inventory" || command === "help") {
+  } else if (["look", "inventory", "help", "save", "load"].includes(command)) {
     return { command, argument: "" };
   } else {
     return { command: "unknown", argument: "" };
   }
 }
 
-// Handle commands with improved feedback
+// Handle commands
 function handleCommand(command, argument) {
   switch (command) {
     case "go":
@@ -225,6 +155,12 @@ function handleCommand(command, argument) {
     case "help":
       help();
       break;
+    case "save":
+      saveGame();
+      break;
+    case "load":
+      loadGame();
+      break;
     case "unknown":
       output("I don't understand that command. Try 'help' for guidance.");
       break;
@@ -233,7 +169,7 @@ function handleCommand(command, argument) {
   }
 }
 
-// Command functions with enhanced feedback
+// Command functions
 function look() {
   const room = rooms[currentRoom];
   let description = room.description;
@@ -332,15 +268,89 @@ function help() {
          "- read [item]: Examine an item (e.g., 'read manual')\n" +
          "- look: View the room\n" +
          "- inventory: Check your items\n" +
+         "- save: Save your game\n" +
+         "- load: Load your game\n" +
          "- help: Show this message\n" +
          "Hint: Explore rooms and read items for clues!");
+}
+
+// Firebase Authentication
+function signUp(email, password) {
+  auth.createUserWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      output("Account created successfully! You can now log in.");
+    })
+    .catch((error) => {
+      output("Error: " + error.message);
+    });
+}
+
+function logIn(email, password) {
+  auth.signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      output("Logged in successfully!");
+      document.getElementById("auth").style.display = "none"; // Hide auth form
+      loadGame(userCredential.user.uid);
+    })
+    .catch((error) => {
+      output("Error: " + error.message);
+    });
+}
+
+// Cloud Save and Load
+function saveGame() {
+  const user = auth.currentUser;
+  if (user) {
+    const saveData = {
+      currentRoom: currentRoom,
+      inventory: inventory,
+      gameState: gameState
+    };
+    database.ref('users/' + user.uid + '/save').set(saveData)
+      .then(() => {
+        output("Game saved successfully!");
+      })
+      .catch((error) => {
+        output("Error saving game: " + error.message);
+      });
+  } else {
+    output("You need to be logged in to save the game.");
+  }
+}
+
+function loadGame(uid) {
+  database.ref('users/' + uid + '/save').once('value')
+    .then((snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        currentRoom = data.currentRoom;
+        inventory = data.inventory;
+        gameState = data.gameState;
+        output("Game loaded successfully!");
+        look();
+      } else {
+        output("No saved game found. Starting a new game.");
+        currentRoom = "serviceDesk";
+        inventory = [];
+        gameState = {
+          antivirusUnlocked: false,
+          malwareAnalyzed: false,
+          patchApplied: false,
+          firewallDeployed: false,
+          trained: false
+        };
+        look();
+      }
+    })
+    .catch((error) => {
+      output("Error loading game: " + error.message);
+    });
 }
 
 // Initialize game and handle input
 document.addEventListener("DOMContentLoaded", () => {
   output(title);
-  output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
-  look();
+  output("Welcome to Summit 7: Cybersecurity Crisis. Sign up or log in to start.");
   const input = document.getElementById("commandInput");
   input.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
