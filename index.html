@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cybersecurity Zork Clone - Summit 7</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
+    }
+    #output {
+      white-space: pre-wrap;
+      padding: 10px;
+      height: 500px;
+      overflow-y: scroll;
+      border: 2px solid #0f0;
+      background-color: #111;
+    }
+    #commandInput {
+      width: 100%;
+      padding: 8px;
+      background-color: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      outline: none;
+      margin-top: 10px;
+    }
+    #commandInput:focus {
+      border-color: #0ff;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+</head>
+<body>
+  <div id="output"></div>
+  <input type="text" id="commandInput" placeholder="Enter command...">
+  <script src="game.js"></script>
+
+  <div id="auth">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
+    <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button>
+  </div>
+</body>
+</html>

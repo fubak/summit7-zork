@@ -1,0 +1,354 @@
+// ASCII Art Title
+const title = `
+   _____ _    _ __  __ __  __ _____ _______   ______ 
+  / ____| |  | |  \/  |  \/  |_   _|__   __| |____  |
+ | (___ | |  | | \  / | \  / | | |    | |        / / 
+  \___ \| |  | | |\/| | |\/| | | |    | |       / /  
+  ____) | |__| | |  | | |  | |_| |_   | |      / /   
+ |_____/ \____/|_|  |_|_|  |_|_____|  |_|     /_/                                                   
+`;
+
+console.log(title);
+
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
+
+function signUp(email, password) {
+    auth.createUserWithEmailAndPassword(email, password)
+      .then((userCredential) => {
+        output("Account created successfully!");
+      })
+      .catch((error) => {
+        output("Error: " + error.message);
+      });
+  }
+  
+  function logIn(email, password) {
+    auth.signInWithEmailAndPassword(email, password)
+      .then((userCredential) => {
+        output("Logged in successfully!");
+        loadGame(userCredential.user.uid);
+      })
+      .catch((error) => {
+        output("Error: " + error.message);
+      });
+  }
+
+  function saveGame() {
+    const user = auth.currentUser;
+    if (user) {
+      const saveData = {
+        currentRoom: currentRoom,
+        inventory: inventory,
+        gameState: gameState
+      };
+      database.ref('users/' + user.uid + '/save').set(saveData)
+        .then(() => {
+          output("Game saved successfully!");
+        })
+        .catch((error) => {
+          output("Error saving game: " + error.message);
+        });
+    } else {
+      output("You need to be logged in to save the game.");
+    }
+  }
+
+  function loadGame(uid) {
+    database.ref('users/' + uid + '/save').once('value')
+      .then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          currentRoom = data.currentRoom;
+          inventory = data.inventory;
+          gameState = data.gameState;
+          output("Game loaded successfully!");
+          look(); // Assuming look() shows the current room
+        } else {
+          output("No saved game found. Starting a new game.");
+          currentRoom = "serviceDesk"; // Default starting room
+          inventory = [];
+          gameState = { /* Default flags */ };
+          look();
+        }
+      })
+      .catch((error) => {
+        output("Error loading game: " + error.message);
+      });
+  }
+
+// Define the game world with rooms
+const rooms = {
+  serviceDesk: {
+    description: "You are at the Service Desk of Summit 7. A computer hums, and a note lies on the desk. An incident report is pinned to a board. Exits: north to Engineering Lab, east to Client Network, west to Training Room, south to Security Vault.",
+    exits: { north: "engineeringLab", east: "clientNetwork", west: "trainingRoom", south: "securityVault" },
+    items: ["note", "incident report"]
+  },
+  engineeringLab: {
+    description: "You are in the Engineering Lab. A computer with antivirus software is locked with a password prompt. A firewall config sits on a shelf. Exits: south to Service Desk, east to Incident Response Room, north to NOC.",
+    exits: { south: "serviceDesk", east: "incidentResponse", north: "noc" },
+    items: ["firewall config"]
+  },
+  trainingRoom: {
+    description: "You are in the Training Room. A training manual rests on a table, offering cybersecurity basics. Exit: east to Service Desk.",
+    exits: { east: "serviceDesk" },
+    items: ["training manual"]
+  },
+  securityVault: {
+    description: "You are in the Security Vault. A locked safe contains an encryption key. Exit: north to Service Desk.",
+    exits: { north: "serviceDesk" },
+    items: ["encryption key"]
+  },
+  incidentResponse: {
+    description: "You are in the Incident Response Room. A whiteboard lists protocols, and a malware sample is in a secure container. An analyzer hums nearby. Exit: west to Engineering Lab.",
+    exits: { west: "engineeringLab" },
+    items: ["malware sample"]
+  },
+  clientNetwork: {
+    description: "You are in the Client Network.\n" +
+                 "    ____\n" +
+                 "   /    \\\n" +
+                 "  /______\\\n" +
+                 "  | INF  | An infected server blinks red.\n" +
+                 "  |______|\n" +
+                 "A vulnerable gateway needs securing. Exit: west to Service Desk.",
+    exits: { west: "serviceDesk" },
+    items: []
+  },
+  noc: {
+    description: "You are in the Network Operations Center (NOC). A console awaits final configurations to secure the network. Exit: south to Engineering Lab.",
+    exits: { south: "engineeringLab" },
+    items: []
+  }
+};
+
+// Game state
+let currentRoom = "serviceDesk";
+let inventory = [];
+let gameState = {
+  antivirusUnlocked: false,
+  malwareAnalyzed: false,
+  patchApplied: false,
+  firewallDeployed: false,
+  trained: false
+};
+
+// Output text to the screen
+function output(text) {
+  const outputDiv = document.getElementById("output");
+  const p = document.createElement("p");
+  p.textContent = text;
+  outputDiv.appendChild(p);
+  outputDiv.scrollTop = outputDiv.scrollHeight;
+}
+
+// Enhanced command parser with natural language capabilities
+function parseInput(input) {
+  const synonyms = {
+    go: ["go", "move", "walk", "head", "proceed"],
+    take: ["take", "pick up", "grab", "get", "acquire"],
+    use: ["use", "apply", "utilize", "employ"],
+    look: ["look", "examine", "inspect", "view"],
+    read: ["read", "peruse", "study", "check"],
+    inventory: ["inventory", "items", "possessions"],
+    help: ["help", "assist", "guide", "instructions"]
+  };
+
+  const directions = ["north", "south", "east", "west"];
+  const words = input.trim().toLowerCase().split(" ");
+  let command = words[0];
+  let argument = words.slice(1).join(" ");
+
+  // Check for synonyms
+  for (const [action, synList] of Object.entries(synonyms)) {
+    if (synList.includes(command)) {
+      command = action;
+      break;
+    }
+  }
+
+  if (command === "save") {
+    saveGame();
+  } else if (command === "load") {
+    const user = auth.currentUser;
+    if (user) loadGame(user.uid);
+    else output("Please log in to load your game.");
+  }
+  
+  if (command === "go" && directions.includes(words[1])) {
+    return { command: "go", argument: words[1] };
+  } else if (command === "take") {
+    return { command: "take", argument: argument };
+  } else if (command === "use" && argument.includes(" on ")) {
+    const parts = argument.split(" on ");
+    return { command: "use", argument: { item: parts[0].trim(), target: parts[1].trim() } };
+  } else if (command === "read") {
+    return { command: "read", argument: argument };
+  } else if (command === "look" || command === "inventory" || command === "help") {
+    return { command, argument: "" };
+  } else {
+    return { command: "unknown", argument: "" };
+  }
+}
+
+// Handle commands with improved feedback
+function handleCommand(command, argument) {
+  switch (command) {
+    case "go":
+      go(argument);
+      break;
+    case "take":
+      take(argument);
+      break;
+    case "look":
+      look();
+      break;
+    case "use":
+      use(argument.item, argument.target);
+      break;
+    case "read":
+      read(argument);
+      break;
+    case "inventory":
+      inventoryCommand();
+      break;
+    case "help":
+      help();
+      break;
+    case "unknown":
+      output("I don't understand that command. Try 'help' for guidance.");
+      break;
+    default:
+      output("Invalid command. Type 'help' for assistance.");
+  }
+}
+
+// Command functions with enhanced feedback
+function look() {
+  const room = rooms[currentRoom];
+  let description = room.description;
+  if (room.items.length > 0) {
+    description += " You see: " + room.items.join(", ") + ".";
+  }
+  output(description);
+}
+
+function go(direction) {
+  const room = rooms[currentRoom];
+  if (room.exits[direction]) {
+    currentRoom = room.exits[direction];
+    look();
+  } else {
+    output("You can't go that way. Check the exits in the room description.");
+  }
+}
+
+function take(item) {
+  const room = rooms[currentRoom];
+  const index = room.items.indexOf(item);
+  if (index !== -1) {
+    inventory.push(item);
+    room.items.splice(index, 1);
+    output("You take the " + item + ".");
+  } else {
+    output("There is no " + item + " here to take.");
+  }
+}
+
+function use(item, target) {
+  if (currentRoom === "engineeringLab" && item === "note" && target === "computer" && inventory.includes("note")) {
+    output("You enter the password from the note. The computer unlocks, and you copy the antivirus software to a USB drive.");
+    inventory.push("antivirus");
+    gameState.antivirusUnlocked = true;
+  } else if (currentRoom === "incidentResponse" && item === "malware sample" && target === "analyzer" && inventory.includes("malware sample")) {
+    output("You analyze the malware sample. It reveals a vulnerability needing a patch.");
+    inventory.push("security patch");
+    gameState.malwareAnalyzed = true;
+  } else if (currentRoom === "clientNetwork" && item === "antivirus" && target === "infected server" && inventory.includes("antivirus")) {
+    output("You run the antivirus on the infected server. The malware is eradicated.");
+    checkVictory();
+  } else if (currentRoom === "clientNetwork" && item === "security patch" && target === "vulnerable gateway" && inventory.includes("security patch") && gameState.malwareAnalyzed) {
+    output("You apply the security patch to the vulnerable gateway.");
+    gameState.patchApplied = true;
+    checkVictory();
+  } else if (currentRoom === "noc" && item === "firewall config" && target === "console" && inventory.includes("firewall config") && gameState.trained) {
+    output("You configure the firewall on the NOC console, blocking further intrusions.");
+    gameState.firewallDeployed = true;
+    checkVictory();
+  } else {
+    output("You can't use " + item + " on " + target + " here. Maybe try something else?");
+  }
+}
+
+function checkVictory() {
+  if (gameState.antivirusUnlocked && gameState.patchApplied && gameState.firewallDeployed) {
+    output("The network is fully secure. Victory!");
+    rooms.clientNetwork.description = "You are in the Client Network. The servers and gateway are secure.";
+  } else {
+    output("Progress made, but the network isn't fully secure yet.");
+  }
+}
+
+function read(item) {
+  if (inventory.includes(item)) {
+    if (item === "note") {
+      output("The note reads: 'Password: Summit7Cyber'.");
+    } else if (item === "training manual") {
+      output("The manual teaches you to analyze logs and configure firewalls. You feel prepared.");
+      gameState.trained = true;
+    } else if (item === "incident report") {
+      output("The report states: 'Client network compromised. Malware detected. Secure servers and gateway.'");
+    } else {
+      output("There's nothing to read on the " + item + ".");
+    }
+  } else {
+    output("You don't have a " + item + " to read.");
+  }
+}
+
+function inventoryCommand() {
+  if (inventory.length === 0) {
+    output("Your inventory is empty.");
+  } else {
+    output("You are carrying: " + inventory.join(", "));
+  }
+}
+
+function help() {
+  output("Commands:\n" +
+         "- go/move/walk/head [direction]: Move (e.g., 'go north')\n" +
+         "- take/pick up/grab/get [item]: Pick up an item (e.g., 'take note')\n" +
+         "- use/apply [item] on [target]: Use an item (e.g., 'use note on computer')\n" +
+         "- read [item]: Examine an item (e.g., 'read manual')\n" +
+         "- look: View the room\n" +
+         "- inventory: Check your items\n" +
+         "- help: Show this message\n" +
+         "Hint: Explore rooms and read items for clues!");
+}
+
+// Initialize game and handle input
+document.addEventListener("DOMContentLoaded", () => {
+  output(title);
+  output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
+  look();
+  const input = document.getElementById("commandInput");
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const inputText = input.value;
+      input.value = "";
+      output("> " + inputText);
+      const { command, argument } = parseInput(inputText);
+      handleCommand(command, argument);
+    }
+  });
+});
