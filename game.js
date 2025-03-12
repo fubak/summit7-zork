@@ -105,9 +105,12 @@ function resetGame(silent = false) {
 
 // Look around the current room
 function look() {
+  if (!rooms[currentRoom]) {
+    output("Error: Current room not found. Resetting to Service Desk.");
+    currentRoom = "serviceDesk";
+  }
   const room = rooms[currentRoom];
   let description = room.description;
-
   if (currentRoom === "engineeringLab") {
     description = room.state.computer === 'locked'
       ? "You are in the Engineering Lab. A computer with antivirus software is locked with a password prompt. A firewall config sits on a shelf."
@@ -132,6 +135,11 @@ function look() {
 
 // Move to another room
 function go(direction) {
+  if (!rooms[currentRoom]) {
+    output("Error: Current room not found. Resetting to Service Desk.");
+    currentRoom = "serviceDesk";
+    return;
+  }
   const room = rooms[currentRoom];
   if (room.exits[direction]) {
     currentRoom = room.exits[direction];
@@ -334,13 +342,20 @@ function loadGame(uid) {
       const data = snapshot.val();
       if (data) {
         currentRoom = data.currentRoom;
-        inventory = data.inventory;
-        gameState = data.gameState;
-        Object.keys(rooms).forEach(key => {
-          if (data.rooms[key]) {
-            rooms[key].state = data.rooms[key].state;
-          }
-        });
+        // Check if currentRoom exists in rooms
+        if (!rooms[currentRoom]) {
+          output("Saved room not found. Starting from Service Desk.");
+          currentRoom = "serviceDesk";
+        }
+        inventory = data.inventory || []; // Default to empty array if undefined
+        gameState = data.gameState || {}; // Default to empty object if undefined
+        if (data.rooms) {
+          Object.keys(rooms).forEach(key => {
+            if (data.rooms[key]) {
+              rooms[key].state = data.rooms[key].state;
+            }
+          });
+        }
         output("Game loaded successfully!");
         look();
       } else {
