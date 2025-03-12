@@ -278,22 +278,39 @@ function help() {
 function signUp(email, password) {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
-      output("Account created successfully! You can now log in.");
+      document.getElementById("authMessage").textContent = "Account created successfully! Please log in.";
     })
     .catch((error) => {
-      output("Error: " + error.message);
+      document.getElementById("authMessage").textContent = "Error: " + error.message;
     });
 }
 
 function logIn(email, password) {
   auth.signInWithEmailAndPassword(email, password)
     .then((userCredential) => {
-      output("Logged in successfully!");
-      document.getElementById("auth").style.display = "none"; // Hide auth form
+      document.getElementById("authMessage").textContent = "Logged in successfully!";
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "block";
+      output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
       loadGame(userCredential.user.uid);
     })
     .catch((error) => {
-      output("Error: " + error.message);
+      document.getElementById("authMessage").textContent = "Error: " + error.message;
+    });
+}
+
+function logInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then((result) => {
+      document.getElementById("authMessage").textContent = "Logged in with Google successfully!";
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "block";
+      output("Welcome to Summit 7: Cybersecurity Crisis. Type 'help' for commands.");
+      loadGame(result.user.uid);
+    })
+    .catch((error) => {
+      document.getElementById("authMessage").textContent = "Error: " + error.message;
     });
 }
 

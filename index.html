@@ -10,6 +10,22 @@
       color: #0f0;
       font-family: monospace;
       padding: 20px;
+      margin: 0;
+    }
+    #title {
+      white-space: pre;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #loginScreen, #gameScreen {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    #loginScreen {
+      display: block;
+    }
+    #gameScreen {
+      display: none;
     }
     #output {
       white-space: pre-wrap;
@@ -32,7 +48,7 @@
       border-color: #0ff;
     }
     #auth {
-      margin-bottom: 20px;
+      text-align: center;
     }
     #auth input, #auth button {
       margin: 5px;
@@ -41,17 +57,34 @@
       color: #0f0;
       border: 1px solid #0f0;
     }
+    #authMessage {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-  <div id="auth">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
-    <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button>
+  <div id="title">
+    _____ _   _ __  __ __  __ _____ _______   ___  
+   / ____| | | |  \/  |  \/  |_   _|__   __| |__ \ 
+  | (___ | | | | \  / | \  / | | |    | |       ) |
+   \___ \| | | | |\/| | |\/| | | |    | |      / / 
+  ____) | |_| | |  | | |  | |_| |_   | |     / /_ 
+ |_____/ \___/|_|  |_|_|  |_|_____|  |_|    |____|
   </div>
-  <div id="output"></div>
-  <input type="text" id="commandInput" placeholder="Enter command...">
+  <div id="loginScreen">
+    <div id="auth">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button onclick="signUp(document.getElementById('email').value, document.getElementById('password').value)">Sign Up</button>
+      <button onclick="logIn(document.getElementById('email').value, document.getElementById('password').value)">Log In</button>
+      <button onclick="logInWithGoogle()">Log In with Google</button>
+      <div id="authMessage"></div>
+    </div>
+  </div>
+  <div id="gameScreen">
+    <div id="output"></div>
+    <input type="text" id="commandInput" placeholder="Enter command...">
+  </div>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
